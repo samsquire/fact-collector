@@ -1,0 +1,423 @@
+<html>
+
+<style>
+.input-area {
+  float: left;
+  font-size: 17pt;
+  font-family: Tahoma;
+  border-top-left-radius: 1em;
+  border-bottom-left-radius: 1em;
+  border: 3px black inset;
+  padding-left: 1ex;
+  width: 81%
+}
+#save {
+  border-top-right-radius: 1em;
+  border-bottom-right-radius: 1em;
+  width: 10%;
+  font-family: Tahoma;
+  float: left;
+  border: 3px black inset;
+  font-size: 17pt;
+  padding-left: 1ex;
+}
+#save.active {
+  background-color: blue;
+  color: white;
+}
+#subresults .active {
+  background-color: blue;
+  color: white;
+}
+#second {
+  clear: both;
+}
+
+</style>
+
+<body>
+
+Try typing "I ate a ", use tab to select autocomplete items and enter to insert
+<div>
+
+
+<div id="input-area" class="input-area" contenteditable="true">Type here
+
+</div>
+<div id="save">
+Save
+</div>
+</div>
+
+<div id="second">
+  <div id="results">
+
+  </div>
+  <div id="subresults">
+
+  </div>
+</div>
+
+<script>
+var facts = [];
+
+function TrieNode(character) {
+	this.children = {};
+  this.key = null;
+  this.value = null;
+  this.character = character;
+}
+
+function Trie() {
+	this.root = new TrieNode("^", null);
+	this.insert = function (key, value) {
+  	var children = this.root.children;
+    var t = null;
+    for (var i = 0; i < key.length; i++) {
+    	var character = key.charAt(i);
+      if (children.hasOwnProperty(character)) {
+      	// we already have this character
+        t = children[character]
+      } else { // Object.hasOwnproperty
+      	t = new TrieNode(character);
+        children[character] = t;
+      }
+      children = t.children;
+    }
+    t.isLeaf = true;
+    t.value = value;
+    t.key = key;
+  } // this.insert
+  this.prefixes = function (prefix, order) {
+  	var children = this.root.children;
+    var t = null;
+    var results = [];
+    for (var i = 0 ; i < prefix.length ; i++) {
+    	var character = prefix.charAt(i);
+      if (children.hasOwnProperty(character)) {
+      	t = children[character];
+        children = t.children;
+      } else {
+      	console.log("Early return");
+      	return results;
+      }
+      }
+    if (t != null && t.isLeaf) {
+      results.push(t);
+    } else {
+      if (order == "ascending") {
+				this.descendAscending(results, children);
+      } else if (order == "descending") {
+      	this.descendDescending(results, children);
+      } // if order
+    } // else
+		return results;
+  } // this.prefixes
+  this.descendAscending = function (results, children) {
+  	var keys = Object.keys(children).sort(function (a, b) { return a-b; });
+    for (var key of keys) {
+    	if (children[key].isLeaf) {
+      	results.push(children[key]);
+      } else {
+      	this.descendAscending(results, children[key].children);
+      }
+    }
+  } // this.descendAscending
+  this.descendDescending = function (results, children) {
+  	var keys = Object.keys(children).sort(function (a, b) { return b-a; });
+    for (var key of keys) {
+    	if (children[key].isLeaf) {
+      	results.push(children[key]);
+      } else {
+      	this.descendDescending(results, children[key].children);
+      }
+    }
+  } // this.descendAscending
+
+}
+
+root = new Trie();
+root.insert("I ate a <fooditem> at <time> with <person>", {});
+root.insert("I drunk <drinkitem>", {});
+
+
+var subtries = {};
+var foodTrie = new Trie();
+
+var peopleTrie = new Trie();
+subtries["fooditem"] = foodTrie;
+subtries["drinkitem"] = new Trie();
+
+subtries["drinkitem"].insert("milk")
+subtries["drinkitem"].insert("water")
+subtries["drinkitem"].insert("tea")
+foodTrie.insert("bacon double cheeseburger")
+foodTrie.insert("ice cream");
+
+peopleTrie.insert("Luke Skinner");
+peopleTrie.insert("Mindey");
+subtries["person"] = peopleTrie;
+
+function TrieInserter(subtrieName) {
+	return function () {
+  	subtries[subtrieName].insert(parsed.parsed[subtrieName]);
+  }
+}
+
+root.insert("I know <person>", TrieInserter("person"));
+root.insert("I eat <fooditem>", TrieInserter("fooditem"));
+
+var timeTrie = new Trie();
+subtries["time"] = timeTrie;
+timeTrie.insert("10:00am");
+
+
+function setCursorToEnd(ele){
+    var range = document.createRange();
+    var sel = window.getSelection();
+    range.setStart(ele, 1);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+console.log(root.prefixes("I ate", "ascending"));
+console.log("Matches ", root.prefixes("I ate ", "ascending"));
+
+var singleMatch = null;
+var matchingFor = null;
+var maxVariables = 0;
+var parsed = {"parsed": null};
+
+function save() {
+	var inputArea = document.getElementById("input-area");
+	console.log("Saving", parsed.parsed);
+  if (typeof singleMatch.value === "function") {
+		singleMatch.value(parsed.parsed);
+  }
+  facts.push({
+  	"fact": inputArea.firstChild.textContent,
+    "parsed": parsed.parsed,
+    "className": singleMatch.key
+  });
+  inputArea.firstChild.textContent = "";
+  console.log(facts);
+}
+
+document.getElementById("save").addEventListener("click", save);
+
+document.getElementById("input-area").addEventListener("click", function () {
+	if (event.target.textContent.indexOf("Type here") == 0 ) {
+  	console.log("Clearing text area");
+  	event.target.firstChild.textContent = "";
+  }
+});
+
+function selectFirst() {
+	var subresultsClasses = document.getElementById("subresults").childNodes[0].classList;
+      if (subresultsClasses != undefined) {
+    		subresultsClasses.add("active");
+      }
+}
+
+document.getElementById("input-area").addEventListener("keydown", function (event) {
+	console.log(event.keyCode);
+  if (event.keyCode == 9 || event.keyCode == 40 || event.keyCode == 38 || event.keyCode == 13) {
+		event.preventDefault();
+    if (event.keyCode == 9) {
+    	// are we finished?
+      
+      if (maxVariables == Object.keys(parsed.parsed).length) {
+      	document.getElementById("save").classList.add("active");
+      } else {
+    		selectFirst();
+      }
+    } // tab button
+    if (event.keyCode == 40) {
+    	console.log("Down");
+      var saveButton = document.getElementById("save");
+      if (saveButton.classList.contains("active")) {
+      	saveButton.classList.remove("active");
+        selectFirst();
+        return;
+      }
+    	var selected = document.querySelector("#subresults .active");
+      if (selected == null) {
+      	return;
+      }
+      selected.classList.remove("active");
+      selected.nextSibling.classList.add("active");
+    }
+    if (event.keyCode == 38) {
+    	console.log("Up");
+    	var selected = document.querySelector("#subresults .active");
+      if (selected == null) {
+      	return;	
+      }
+      selected.classList.remove("active");
+      selected.previousSibling.classList.add("active");
+    }
+    if (event.keyCode == 13) {
+    	var saveButton = document.getElementById("save");
+      
+      if (saveButton.classList.contains("active")) {
+      	save();
+        saveButton.classList.remove("active");
+        return;
+      }
+      
+    	var selected = document.querySelector("#subresults .active");
+      if (selected == null) {
+      	return;
+      }
+      var inputArea = document.getElementById("input-area");
+      var partialMatch = selected.textContent;
+      
+      
+      var searchLeft = 0;
+      var searchRight = 0;
+      while (searchLeft < inputArea.textContent.length && searchRight < selected.textContent.length) {
+      	if (inputArea.textContent[searchLeft] != selected.textContent[searchRight]) {
+        searchLeft++;
+        }
+        if (inputArea.textContent[searchLeft] == selected.textContent[searchRight]) {
+        	searchLeft++;
+          searchRight++;
+        }
+      }
+      console.log(searchRight);
+      partialMatch = partialMatch.substring(searchRight);
+      inputArea.textContent = inputArea.textContent + partialMatch + " ";
+      
+      setCursorToEnd(inputArea);
+    }
+  }
+  });
+  
+document.getElementById("input-area").addEventListener("keyup", function (event) {
+  
+  if (event.keyCode == 9 || event.keyCode == 40 || event.keyCode == 38 || event.keyCode == 13) {
+  event.preventDefault();
+  return;
+  }
+
+    var search = event.target.textContent.replace(/\u00A0/g, " ");
+
+
+    var matches = root.prefixes(search, "ascending");
+    console.log(matches.length);
+
+    console.log("Matches are ", matches);
+    var elements = matches.map(function (item) {
+      var container = document.createElement("div");
+      var textNode = document.createTextNode(item.key);
+      container.appendChild(textNode);
+      return container;
+    });
+    var results = document.getElementById("results");
+    if (matches.length > 0) {
+      while (results.hasChildNodes()) {
+        results.removeChild(results.lastChild);
+    }
+      elements.forEach(function (item) {
+        results.appendChild(item);
+      });
+    } // if matches length > 0
+
+    if (matches.length == 1) {
+      console.log(matches[0].key);
+      singleMatch = matches[0];
+    } // matches.length == 1
+    if (singleMatch != null) {
+
+      var nextSearch = singleMatch.key;
+      var subItemSearch = nextSearch.match("<(?<matchgroup>[a-z]+)>");
+      console.log(subItemSearch);
+      if (subItemSearch != null && subItemSearch.groups.matchgroup != undefined) {
+
+        matchingFor = subItemSearch.groups.matchgroup;
+        console.log(matchingFor);
+        // console.log(subtries[subItemSearch.groups.matchgroup].prefixes(event.target.textContent.substring(nextSearch.length)));
+      } // have match group
+      var source = singleMatch.key.split(" ");
+      var values = search.split(" ");
+      var i = 0;
+      var soughtVariables = [];
+      
+      var sourceI = 0;
+      var b = 0;
+      maxVariables = 0;
+      for (var m = 0; m < source.length ; m ++) {
+        if (source[m][0] == "<") {
+          maxVariables++;
+        }
+      }
+      while (b < maxVariables) {
+        b++
+
+        // get to equal footing
+        while (values[i] == source[sourceI]) {
+
+          i++;
+          sourceI++;
+        } // values[i] == source[sourceI]
+        if (source[sourceI][0] == "<") {
+          var variable = source[sourceI].substring(1, source[sourceI].length - 1)
+
+          // we've encountered a variable, collect values until we get to source[i+1]
+          var search =  [];
+          var stopindex = sourceI+1;
+          while (i < values.length && values[i] != source[stopindex]) {
+            search.push(values[i])
+            i++
+          }
+          console.log(variable, search);
+          soughtVariables.unshift([variable, search.join(" ")]);
+          sourceI++
+
+        } // in variable
+
+      } // while matching
+      
+      if (soughtVariables.length > 0) {
+        var topMost = soughtVariables[0];
+        var variable = topMost[0];
+        var query = topMost[1];
+        
+        parsed["parsed"] = {};
+        for (var i = 0 ; i < soughtVariables.length ; i++) {
+      		parsed.parsed[soughtVariables[i][0]] = soughtVariables[i][1];
+      	}
+      	console.log(parsed.parsed);
+        
+        var subresultMatch = subtries[variable].prefixes(query, "ascending");
+
+
+
+       var resultNodes = subresultMatch.map(function (item) {
+          var container = document.createElement("div");
+          var textNode = document.createTextNode(item.key);
+          container.appendChild(textNode);
+          return container;
+       });
+
+       var subresults = document.getElementById("subresults");
+
+       while (subresults.hasChildNodes()) {
+        subresults.removeChild(subresults.lastChild);
+        } // while removeChild
+
+        resultNodes.forEach(function (item) {
+          subresults.appendChild(item);
+        }); // resultNodes.forEach
+			
+
+    } // soughtVariables.length > 0
+
+
+    } // singleMatch != null
+  
+}) // addEventListener
+</script>
+</body>
+</html>
