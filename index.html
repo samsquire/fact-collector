@@ -32,6 +32,9 @@
 #second {
   clear: both;
 }
+#facts {
+	background-color: grey;
+}
 
 </style>
 
@@ -55,6 +58,10 @@ Save
   </div>
   <div id="subresults">
 
+  </div>
+  <h1>Inserted Facts</h1>
+  <div id="facts">
+  
   </div>
 </div>
 
@@ -202,6 +209,7 @@ function save() {
   });
   inputArea.firstChild.textContent = "";
   console.log(facts);
+  renderFacts();
 }
 
 document.getElementById("save").addEventListener("click", save);
@@ -418,6 +426,22 @@ document.getElementById("input-area").addEventListener("keyup", function (event)
     } // singleMatch != null
   
 }) // addEventListener
+
+function renderFacts() {
+	var factNodes = facts.map(function (item) {
+		var container = document.createElement("div");
+		var textNode = document.createTextNode(item.fact);
+		container.appendChild(textNode);
+		return container;
+	});
+	var factContainer = document.getElementById("facts");
+	while (factContainer.hasChildNodes()) {
+		factContainer.removeChild(factContainer.lastChild);
+	}
+	factNodes.forEach(function (item) {
+		factContainer.appendChild(item);
+	});
+}
 </script>
 </body>
 </html>
