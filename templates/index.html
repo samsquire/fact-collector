@@ -61,7 +61,7 @@ Save
   </div>
   <h1>Inserted Facts</h1>
   <div id="facts">
-  
+
   </div>
 </div>
 
@@ -69,17 +69,22 @@ Save
 var facts = [];
 
 function TrieNode(character) {
-	this.children = {};
+  this.children = {};
   this.key = null;
   this.value = null;
   this.character = character;
+  this.memberOf = [];
 }
 
 function Trie() {
 	this.root = new TrieNode("^", null);
+    this.clear = function () {
+        this.root = new TrieNode("^", null);
+    }
 	this.insert = function (key, value) {
   	var children = this.root.children;
     var t = null;
+    var created = [];
     for (var i = 0; i < key.length; i++) {
     	var character = key.charAt(i);
       if (children.hasOwnProperty(character)) {
@@ -88,12 +93,16 @@ function Trie() {
       } else { // Object.hasOwnproperty
       	t = new TrieNode(character);
         children[character] = t;
+        created.push(t);
       }
       children = t.children;
     }
     t.isLeaf = true;
     t.value = value;
     t.key = key;
+    for (var i = 0 ; i < created.length; i++) {
+        created[i].memberOf.push(t);
+    }
   } // this.insert
   this.prefixes = function (prefix, order) {
   	var children = this.root.children;
@@ -108,7 +117,7 @@ function Trie() {
       	console.log("Early return");
       	return results;
       }
-      }
+    } // string scan
     if (t != null && t.isLeaf) {
       results.push(t);
     } else {
@@ -120,6 +129,26 @@ function Trie() {
     } // else
 		return results;
   } // this.prefixes
+
+  this.mostLikely = function (prefix) {
+      var children = this.root.children;
+      var t = null;
+      var results = [];
+      for (var i = 0 ; i < prefix.length ; i++) {
+      	var character = prefix.charAt(i);
+        console.log("Searching", character);
+        if (children.hasOwnProperty(character)) {
+            console.log("Found match");
+
+            t = children[character];
+            children = t.children;
+        } else {
+
+        }
+      } // string scan
+      return t;
+  } // mostLikely
+
   this.descendAscending = function (results, children) {
   	var keys = Object.keys(children).sort(function (a, b) { return a-b; });
     for (var key of keys) {
@@ -152,6 +181,7 @@ var subtries = {};
 var foodTrie = new Trie();
 
 var peopleTrie = new Trie();
+subtries["person"] = peopleTrie;
 subtries["fooditem"] = foodTrie;
 subtries["drinkitem"] = new Trie();
 
@@ -163,11 +193,17 @@ foodTrie.insert("ice cream");
 
 peopleTrie.insert("Luke Skinner");
 peopleTrie.insert("Mindey");
-subtries["person"] = peopleTrie;
+
+function clearTries() {
+    for (var key of Object.keys(subtries)) {
+            subtries[key].clear();
+    }
+}
+
 
 function TrieInserter(subtrieName) {
-	return function () {
-  	subtries[subtrieName].insert(parsed.parsed[subtrieName]);
+	return function (parsed) {
+  	subtries[subtrieName].insert(parsed[subtrieName]);
   }
 }
 
@@ -189,30 +225,37 @@ function setCursorToEnd(ele){
 }
 
 console.log(root.prefixes("I ate", "ascending"));
-console.log("Matches ", root.prefixes("I ate ", "ascending"));
 
 var singleMatch = null;
 var matchingFor = null;
 var maxVariables = 0;
 var parsed = {"parsed": null};
 
-function save() {
-	var inputArea = document.getElementById("input-area");
-	console.log("Saving", parsed.parsed);
-  if (typeof singleMatch.value === "function") {
-		singleMatch.value(parsed.parsed);
-  }
-  facts.push({
-  	"fact": inputArea.firstChild.textContent,
-    "parsed": parsed.parsed,
-    "className": singleMatch.key
-  });
-  inputArea.firstChild.textContent = "";
-  console.log(facts);
-  renderFacts();
+function save(singleMatch, fact, parsed) {
+    fetch('save/main', {
+        method: "POST",
+        headers: {
+        'Content-Type': 'application/json',
+        // 'Content-Type': 'application/x-www-form-urlencoded',
+    },
+        body: JSON.stringify({parsed: parsed, fact: fact})
+    }).then(() => {
+        renderFacts();
+        // import fact
+        if (typeof singleMatch.value === "function") {
+      		singleMatch.value(parsed.parsed);
+        }
+    });
 }
 
-document.getElementById("save").addEventListener("click", save);
+function formSave() {
+    var inputArea = document.getElementById("input-area");
+    save(singleMatch, inputArea.firstChild.textContent,
+        parsed.parsed);
+    inputArea.firstChild.textContent = "";
+}
+
+document.getElementById("save").addEventListener("click", formSave);
 
 document.getElementById("input-area").addEventListener("click", function () {
 	if (event.target.textContent.indexOf("Type here") == 0 ) {
@@ -234,7 +277,7 @@ document.getElementById("input-area").addEventListener("keydown", function (even
 		event.preventDefault();
     if (event.keyCode == 9) {
     	// are we finished?
-      
+
       if (maxVariables == Object.keys(parsed.parsed).length) {
       	document.getElementById("save").classList.add("active");
       } else {
@@ -260,28 +303,29 @@ document.getElementById("input-area").addEventListener("keydown", function (even
     	console.log("Up");
     	var selected = document.querySelector("#subresults .active");
       if (selected == null) {
-      	return;	
+      	return;
       }
       selected.classList.remove("active");
       selected.previousSibling.classList.add("active");
     }
     if (event.keyCode == 13) {
     	var saveButton = document.getElementById("save");
-      
+
       if (saveButton.classList.contains("active")) {
-      	save();
+        var inputArea = document.getElementById("input-area");
+      	formSave();
         saveButton.classList.remove("active");
         return;
       }
-      
+
     	var selected = document.querySelector("#subresults .active");
       if (selected == null) {
       	return;
       }
       var inputArea = document.getElementById("input-area");
       var partialMatch = selected.textContent;
-      
-      
+
+
       var searchLeft = 0;
       var searchRight = 0;
       while (searchLeft < inputArea.textContent.length && searchRight < selected.textContent.length) {
@@ -296,14 +340,59 @@ document.getElementById("input-area").addEventListener("keydown", function (even
       console.log(searchRight);
       partialMatch = partialMatch.substring(searchRight);
       inputArea.textContent = inputArea.textContent + partialMatch + " ";
-      
+
       setCursorToEnd(inputArea);
     }
   }
   });
-  
+
+
+function parseFact(source, search) {
+    var source = source.split(" ");
+    var values = search.split(" ");
+    var i = 0;
+    var soughtVariables = [];
+
+    var sourceI = 0;
+    var b = 0;
+    maxVariables = 0;
+    for (var m = 0; m < source.length ; m ++) {
+      if (source[m][0] == "<") {
+        maxVariables++;
+      }
+    }
+    while (b < maxVariables) {
+      b++
+
+      // get to equal footing
+      while (values[i] == source[sourceI]) {
+
+        i++;
+        sourceI++;
+      } // values[i] == source[sourceI]
+      if (source[sourceI][0] == "<") {
+        var variable = source[sourceI].substring(1, source[sourceI].length - 1)
+
+        // we've encountered a variable, collect values until we get to source[i+1]
+        var search =  [];
+        var stopindex = sourceI+1;
+        while (i < values.length && values[i] != source[stopindex]) {
+          search.push(values[i])
+          i++
+        }
+        console.log(variable, search);
+        soughtVariables.unshift([variable, search.join(" ")]);
+        sourceI++
+
+      } // in variable
+
+    } // while matching
+
+    return soughtVariables;
+} // function parseFact
+
 document.getElementById("input-area").addEventListener("keyup", function (event) {
-  
+
   if (event.keyCode == 9 || event.keyCode == 40 || event.keyCode == 38 || event.keyCode == 13) {
   event.preventDefault();
   return;
@@ -338,66 +427,20 @@ document.getElementById("input-area").addEventListener("keyup", function (event)
     } // matches.length == 1
     if (singleMatch != null) {
 
-      var nextSearch = singleMatch.key;
-      var subItemSearch = nextSearch.match("<(?<matchgroup>[a-z]+)>");
-      console.log(subItemSearch);
-      if (subItemSearch != null && subItemSearch.groups.matchgroup != undefined) {
+      soughtVariables = parseFact(singleMatch.key, search);
 
-        matchingFor = subItemSearch.groups.matchgroup;
-        console.log(matchingFor);
-        // console.log(subtries[subItemSearch.groups.matchgroup].prefixes(event.target.textContent.substring(nextSearch.length)));
-      } // have match group
-      var source = singleMatch.key.split(" ");
-      var values = search.split(" ");
-      var i = 0;
-      var soughtVariables = [];
-      
-      var sourceI = 0;
-      var b = 0;
-      maxVariables = 0;
-      for (var m = 0; m < source.length ; m ++) {
-        if (source[m][0] == "<") {
-          maxVariables++;
-        }
-      }
-      while (b < maxVariables) {
-        b++
 
-        // get to equal footing
-        while (values[i] == source[sourceI]) {
-
-          i++;
-          sourceI++;
-        } // values[i] == source[sourceI]
-        if (source[sourceI][0] == "<") {
-          var variable = source[sourceI].substring(1, source[sourceI].length - 1)
-
-          // we've encountered a variable, collect values until we get to source[i+1]
-          var search =  [];
-          var stopindex = sourceI+1;
-          while (i < values.length && values[i] != source[stopindex]) {
-            search.push(values[i])
-            i++
-          }
-          console.log(variable, search);
-          soughtVariables.unshift([variable, search.join(" ")]);
-          sourceI++
-
-        } // in variable
-
-      } // while matching
-      
       if (soughtVariables.length > 0) {
         var topMost = soughtVariables[0];
         var variable = topMost[0];
         var query = topMost[1];
-        
+
         parsed["parsed"] = {};
         for (var i = 0 ; i < soughtVariables.length ; i++) {
       		parsed.parsed[soughtVariables[i][0]] = soughtVariables[i][1];
       	}
       	console.log(parsed.parsed);
-        
+
         var subresultMatch = subtries[variable].prefixes(query, "ascending");
 
 
@@ -418,30 +461,64 @@ document.getElementById("input-area").addEventListener("keyup", function (event)
         resultNodes.forEach(function (item) {
           subresults.appendChild(item);
         }); // resultNodes.forEach
-			
+
 
     } // soughtVariables.length > 0
 
 
     } // singleMatch != null
-  
+
 }) // addEventListener
 
 function renderFacts() {
-	var factNodes = facts.map(function (item) {
-		var container = document.createElement("div");
-		var textNode = document.createTextNode(item.fact);
-		container.appendChild(textNode);
-		return container;
-	});
-	var factContainer = document.getElementById("facts");
-	while (factContainer.hasChildNodes()) {
-		factContainer.removeChild(factContainer.lastChild);
-	}
-	factNodes.forEach(function (item) {
-		factContainer.appendChild(item);
-	});
-}
+
+    fetch('http://localhost:5010/facts/main').then((response) => {
+    		return response.json();
+    	}).then((json) => {
+            clearTries();
+            for (var i = 0 ; i < json.length; i++) {
+                var item = json[i];
+                if (item.name.indexOf("<") != -1) {
+                    root.insert(item.name, {});
+                }
+            }
+            for (var i = 0 ; i < json.length; i++) {
+                var item = json[i];
+                if (item.name.indexOf("<") == -1) {
+                    console.log(item.name);
+                    var match = root.mostLikely(item.name);
+                    console.log("Most likely match is ", match.memberOf[0], match.memberOf[0].key);
+                    match = match.memberOf[0];
+                    var soughtVariables = parseFact(match.key, item.name);
+                    var parsed = {};
+                    for (var j = 0 ; j < soughtVariables.length ; j ++) {
+                        parsed[soughtVariables[j][0]] = soughtVariables[j][1];
+                    }
+                    if (typeof match.value === "function") {
+                  		match.value(parsed);
+                    }
+                }
+            }
+
+            var factNodes = json.map(function (item) {
+        		var container = document.createElement("div");
+        		var textNode = document.createTextNode(item.name);
+        		container.appendChild(textNode);
+        		return container;
+        	});
+        	var factContainer = document.getElementById("facts");
+        	while (factContainer.hasChildNodes()) {
+        		factContainer.removeChild(factContainer.lastChild);
+        	}
+        	factNodes.forEach(function (item) {
+        		factContainer.appendChild(item);
+        	});
+    	});
+
+
+} // function renderFacts
+
+renderFacts();
 </script>
 </body>
 </html>
