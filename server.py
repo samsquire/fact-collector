@@ -3,6 +3,7 @@ import time
 from flask import Flask, request, make_response, Response, render_template
 app = Flask(__name__)
 import psycopg2
+import datetime
 
 try:
     conn = psycopg2.connect("dbname='forum' user='forum' host='172.17.0.1' password='forum'")
@@ -15,8 +16,8 @@ def save(collection):
     data = request.get_json()
     cur = conn.cursor()
     cur.execute("""
-    insert into facts (fact, parsed, fact_collection) values (%s, %s, %s);
-    """, (data["fact"], json.dumps(data["parsed"]), collection))
+    insert into facts (fact, parsed, class, fact_collection, timestamp) values (%s, %s, %s, %s, now());
+    """, (data["fact"], json.dumps(data["parsed"]), data["class"], collection))
     conn.commit()
     return make_response('', 200)
 
