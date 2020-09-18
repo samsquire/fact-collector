@@ -9,7 +9,7 @@ Autocomplete interface powered by Tries. Can insert records and insert into itse
 
 # Install
 
-Create a database called `forum` with password `forum`:
+Create a postgres database called `forum` with password `forum`:
 
 ```
 virtualenv -p $(which python3) venv
