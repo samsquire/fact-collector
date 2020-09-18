@@ -16,7 +16,10 @@ CREATE USER forum WITH PASSWORD 'forum';
 GRANT ALL PRIVILEGES ON DATABASE forum to forum;
 ```
 
+
+
 ```
+sudo apt install postgresql-server-dev-all python3-dev
 virtualenv -p $(which python3) venv
 source venv/bin/activate
 python3 install.py # once for database population
