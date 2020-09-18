@@ -33,7 +33,8 @@ beginner_facts = [
     "Inference and(likes(sam, X), likes(X, sam)).",
     "Inference and(likes(sam, X), \+(likes(X, sam))).",
     "Logic likes(sam, john).",
-    "Logic likes(sam, peter)."
+    "Logic likes(sam, peter).",
+    "Logic likes(john, sam)."
     ]
 
 for fact in beginner_facts:
