@@ -10,6 +10,11 @@ Autocomplete interface powered by Tries. Can insert records and insert into itse
 # Install
 
 Create a postgres database called `forum` with password `forum`:
+```
+CREATE DATABASE forum;
+CREATE USER forum WITH PASSWORD 'forum';
+GRANT ALL PRIVILEGES ON DATABASE forum to forum;
+```
 
 ```
 virtualenv -p $(which python3) venv
