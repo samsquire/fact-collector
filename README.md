@@ -9,9 +9,12 @@ Autocomplete interface powered by Tries. Can insert records and insert into itse
 
 # Install
 
+Create a database called `forum` with password `forum`:
+
 ```
-virtualenv -p $(which python3.8) venv
+virtualenv -p $(which python3) venv
 source venv/bin/activate
+python install.py # once for database population
 pip install -r requirements.txt
 ./run.sh
 ```
