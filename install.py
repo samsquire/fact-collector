@@ -29,7 +29,11 @@ beginner_facts = [
     "I ate a <fooditem> at <time> with <person>",
     "Addendum I eat <fooditem>",
     "Addendum I know <person>",
-    "I drunk <drinkitem>"
+    "I drunk <drinkitem>",
+    "Inference and(likes(sam, X), likes(X, sam)).",
+    "Inference and(likes(sam, X), \+(likes(X, sam))).",
+    "Logic likes(sam, john).",
+    "Logic likes(sam, peter)."
     ]
 
 for fact in beginner_facts:

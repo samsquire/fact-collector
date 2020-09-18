@@ -34,10 +34,18 @@
   clear: both;
 }
 #facts {
+    float: left;
 	background-color: grey;
+    width: 50%;
+}
+#inferences {
+    float: left;
+    width: 50%;
 }
 
+
 </style>
+<script src="static/tau-prolog.js"></script>
 </head>
 <body>
 
@@ -60,10 +68,18 @@ Save
   <div id="subresults">
 
   </div>
-  <h1>Inserted Facts</h1>
-  <div id="facts">
 
-  </div>
+  <h1>Inserted Facts</h1>
+  <div div="holder">
+      <h2>Facts</h2>
+      <div id="facts">
+
+      </div>
+      <h2>Inferences</h2>
+      <div id="inferences">
+
+      </div>
+</div>
 </div>
 
 <script>
@@ -137,7 +153,6 @@ function Trie() {
       var results = [];
       for (var i = 0 ; i < prefix.length ; i++) {
       	var character = prefix.charAt(i);
-        console.log("Searching", character);
         if (children.hasOwnProperty(character)) {
             console.log("Found match");
 
@@ -239,13 +254,17 @@ var maxVariables = 0;
 var parsed = {"parsed": {}};
 
 function save(singleMatch, fact, parsed) {
+    var clazz = "";
+    if (singleMatch != null) {
+        clazz = singleMatch.key
+    }
     fetch('save/main', {
         method: "POST",
         headers: {
         'Content-Type': 'application/json',
         // 'Content-Type': 'application/x-www-form-urlencoded',
     },
-        body: JSON.stringify({parsed: parsed, fact: fact, class: singleMatch.key})
+        body: JSON.stringify({parsed: parsed, fact: fact, class: clazz})
     }).then(() => {
         renderFacts();
         // import fact
@@ -513,25 +532,32 @@ function renderFacts() {
                 if (item.name.indexOf("<") == -1) {
                     console.log(item.name);
                     var match = root.mostLikely(item.name);
+                    if (match == null) {
+                        continue;
+                    }
                     var mostLikely = match.memberOf[0];
-                    console.log("Most likely match is ", mostLikely, mostLikely.key);
+                    console.log(item.name, "Most likely match is ", mostLikely, mostLikely.key);
                     match = match.memberOf[0];
                     var soughtVariables = parseFact(match.key, item.name);
-                    var parsed = {};
-                    for (var j = 0 ; j < soughtVariables.length ; j ++) {
-                        parsed[soughtVariables[j][0]] = soughtVariables[j][1];
-                    }
-                    if (typeof match.value === "function") {
-                  		match.value(parsed);
-                    }
-                    console.log(getVariables(mostLikely.key));
-                    for (var variable of getVariables(mostLikely.key)) {
-                        if (parsed[variable] !== undefined) {
-                            subtries[variable].insert(parsed[variable]);
+                    if (soughtVariables.length > 0) {
+
+
+                        var parsed = {};
+                        for (var j = 0 ; j < soughtVariables.length ; j ++) {
+                            parsed[soughtVariables[j][0]] = soughtVariables[j][1];
                         }
-                    }
-                }
-            }
+                        if (typeof match.value === "function") {
+                      		match.value(parsed);
+                        }
+                        console.log(getVariables(mostLikely.key));
+                        for (var variable of getVariables(mostLikely.key)) {
+                            if (subtries[variable] !== undefined && parsed[variable] !== undefined) {
+                                subtries[variable].insert(parsed[variable]);
+                            }
+                        } // for (var variable of getVariables(mostLikely.key))
+                    } // soughtVariables.length > 0
+                } // (item.name.indexOf("<") == -1)
+            } // for (var i = 0 ; i < json.length; i++)
 
             var factNodes = json.map(function (item) {
         		var container = document.createElement("div");
@@ -546,12 +572,96 @@ function renderFacts() {
         	factNodes.forEach(function (item) {
         		factContainer.appendChild(item);
         	});
-    	});
+            var inferencesArea = document.getElementById("inferences");
+            while (inferencesArea.hasChildNodes()) {
+                inferencesArea.removeChild(inferencesArea.lastChild);
+            }
+
+            var session = pl.create();
+            var LOGIC = "Logic";
+            var INFERENCE = "Inference";
+            var logicRules = json.filter(item => item.name.indexOf(LOGIC) !== -1)
+            var inferences = json.filter(item => item.name.indexOf(INFERENCE) !== -1)
+            var logicStatements = logicRules.map(item => {
+                var beginning = item.name.indexOf(LOGIC);
+                var logic = item.name.substring(beginning + LOGIC.length + 1);
+                return logic;
+            });
+            var inferStatements = inferences.map(item => {
+                var beginning = item.name.indexOf(INFERENCE);
+                var logic = item.name.substring(beginning + INFERENCE.length + 1);
+                return logic;
+            });
+
+/*
+likes(sam, X).
+likes(john, sam).
+and(A,B):- is_true(A), is_true(B).
+or(A,B):- is_true(A) ; is_true(B).
+and(likes(sam, john),likes(john, sam)).
+*/
+/*
+`and(likes(sam, X), likes(X, sam)).`
+*/
+
+
+            // Inference and(likes(sam, X), \+(likes(X, sam))).
+            session.consult(`
+            is_true(true).
+            is_true(A):- var(A), !, false.
+            is_true(and(A,B)):- and(A,B).
+            is_true(or(A,B)):- or(A,B).
+            and(A,B):- A,B.
+            or(A,B):- A;B.
+            ` + logicStatements.join("\n")
+            , {
+                success: function() {
+                    // Query
+                    for (var statement of inferStatements) {
+                        console.log("Running query of", statement);
+                        session.query(statement, {
+                            success: function(goal) {
+                                // Answers
+                                session.answer({
+                                    success: function (statement) {
+                                        return function(answer) {
+                                            console.log("answer", answer.links);
+                                            var keys = Object.keys(answer.links);
+                                            var container = document.createElement("div");
+                                            var textNode = document.createTextNode(statement);
+                                            var ul = document.createElement("ul");
+                                            container.appendChild(textNode);
+                                            container.appendChild(ul);
+                                            for (var key of keys) {
+                                                var li = document.createElement("li");
+                                                var textNode = document.createTextNode(key + "=" + answer.links[key])
+                                                li.appendChild(textNode);
+                                                container.appendChild(li);
+                                            }
+                                            inferencesArea.appendChild(container);
+                                        }
+                                    }(statement),
+                                    error:   function(err) { console.log("answer", err); },
+                                    fail:    function() { console.log("answer fail"); },
+                                    limit:   function() { /* Limit exceeded */ }
+                                })
+                            },
+                            error: function(err) { console.log("query", err); }
+                        });
+                    } // for (var statement of inferStatements)
+                }, // session.consult success
+                error: function(err) { console.log("consult", err); }
+            }); // session.consult
+
+
+
+    	}); // json then
 
 
 } // function renderFacts
 
 renderFacts();
+
 </script>
 </body>
 </html>
