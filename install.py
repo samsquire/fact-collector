@@ -8,12 +8,12 @@ except Exception as e:
 
 cur = conn.cursor()
 cur.execute("""
-
+drop table if exists fact_collections;
 create table if not exists fact_collections (
     id SERIAL PRIMARY KEY,
     name TEXT
 );
-drop table facts;
+drop table if exists facts;
 create table if not exists facts (
     id SERIAL PRIMARY KEY,
     fact TEXT,
@@ -24,6 +24,13 @@ create table if not exists facts (
 );
 
 """)
+
+fact_collections = ["main"]
+for fact_collection in fact_collections:
+    cur = conn.cursor()
+    cur.execute("""
+    insert into fact_collections (name) values('main');
+    """)
 
 beginner_facts = [
     "I ate a <fooditem> at <time> with <person>",
