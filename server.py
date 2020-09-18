@@ -6,7 +6,7 @@ import psycopg2
 import datetime
 
 try:
-    conn = psycopg2.connect("dbname='forum' user='forum' host='172.17.0.1' password='forum'")
+    conn = psycopg2.connect("dbname='forum' user='forum' host='127.0.0.1' password='forum'")
 except Exception as e:
     print("I am unable to connect to the database")
     print(e)
