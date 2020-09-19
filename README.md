@@ -31,3 +31,4 @@ python3 install.py # once for database population
 pip install -r requirements.txt
 ./run.sh
 ```
+Go to http://localhost:5010/
