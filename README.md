@@ -7,6 +7,11 @@ Autocomplete interface powered by Tries. Can insert records and insert into itse
 
 * prototype was written on js fiddle -> [Mirrored](https://jsfiddle.net/8nat61g5/13/)
 
+# Prolog inference
+
+* Prolog statements begin with "Logic"
+* Prolog queries begin with "Inference"
+
 # Install
 
 Create a postgres database called `forum` with password `forum`:
