@@ -4,9 +4,19 @@ from flask import Flask, request, make_response, Response, render_template
 app = Flask(__name__)
 import psycopg2
 import datetime
+import os
+
+from argparse import ArgumentParser
+parser = ArgumentParser()
+parser.add_argument("--database-password")
+parser.add_argument("--database-name")
+parser.add_argument("--database-user")
+parser.add_argument("--database-host")
+args = parser.parse_args(os.environ["ARGUMENTS"].split(" "))
 
 try:
-    conn = psycopg2.connect("dbname='forum' user='forum' host='127.0.0.1' password='forum'")
+    conn = psycopg2.connect("dbname='{}' user='{}' host='{}' password='{}'".format(args.database_name,
+        args.database_user, args.database_host, args.database_password))
 except Exception as e:
     print("I am unable to connect to the database")
     print(e)
