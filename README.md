@@ -1,13 +1,15 @@
 # fact-collector
 
-Autocomplete interface powered by Tries. Can insert records and insert into itself.
+An interface for collecting facts about yourself, your day or to be used as a microblog. Autocomplete interface powered by Tries. Can insert records and insert into itself.
 
-* Type "I ate a"  then use arrow keys to control selected item. Press enter to insert into textarea.
+* Type "I ate a"  then use arrow keys to control selected item. Press enter to insert them into textarea.
 * When you have fulfilled all variables, press tab and press enter on save.
 
 * prototype was written on js fiddle -> [Mirrored](https://jsfiddle.net/8nat61g5/13/)
 
 # Prolog inference
+
+The tau interpreter is used to answer questions about logical statements.
 
 * Prolog statements begin with "Logic"
 * Prolog queries begin with "Inference"
