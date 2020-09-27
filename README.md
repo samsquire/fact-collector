@@ -29,6 +29,6 @@ virtualenv -p $(which python3) venv
 source venv/bin/activate
 python3 install.py # once for database population
 pip install -r requirements.txt
-./run.sh
+./fact-collector --database-host localhost --database-user forum --database-password forum --database-name forum
 ```
 Go to http://localhost:5010/
