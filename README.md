@@ -1,5 +1,7 @@
 # fact-collector
 
+![example](example.png)
+
 An interface for collecting facts about yourself, your day or to be used as a microblog. Autocomplete interface powered by Tries. Can insert records and insert into itself.
 
 * Type "I ate a"  then use arrow keys to control selected item. Press enter to insert them into textarea.
