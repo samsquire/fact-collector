@@ -7,7 +7,7 @@ An interface for collecting facts about yourself, your day or to be used as a mi
 * For example ```"I ate a <fooditem> at <time> with <person>"``` has three variables which are stored separately with the fact in the database.
 * Type "I ate a"  then use arrow keys to control selected item. Press enter to insert them into textarea.
 * When you have fulfilled all variables, press tab and press enter on save.
-* Generate summary tables.
+* Generate summary tables with variable totals 
 
 * prototype was written on js fiddle -> [Mirrored](https://jsfiddle.net/8nat61g5/13/)
 
